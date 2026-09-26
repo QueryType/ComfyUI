@@ -252,8 +252,9 @@ class AvgDown3D(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         pad_t = (self.factor_t - x.shape[2] % self.factor_t) % self.factor_t
-        pad = (0, 0, 0, 0, pad_t, 0)
-        x = F.pad(x, pad)
+        if pad_t:
+            # F.pad on the time dim returns garbage on MPS once H * W >= 2**16 (PyTorch 2.7 - 2.14)
+            x = torch.cat([x.new_zeros(x.shape[0], x.shape[1], pad_t, x.shape[3], x.shape[4]), x], dim=2)
         B, C, T, H, W = x.shape
         x = x.view(
             B,
