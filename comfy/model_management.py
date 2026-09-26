@@ -900,7 +900,9 @@ def free_memory(memory_required, device, keep_loaded=[], for_dynamic=False, pins
 
     for i in range(len(current_loaded_models) -1, -1, -1):
         shift_model = current_loaded_models[i]
-        if device is None or shift_model.device == device:
+        # unified memory: a cpu-resident model still competes with mps allocations for the same physical RAM
+        shares_unified_memory = cpu_state == CPUState.MPS and is_device_cpu(shift_model.device) and is_device_mps(device)
+        if device is None or shift_model.device == device or shares_unified_memory:
             if shift_model not in keep_loaded and not shift_model.is_dead():
                 can_unload.append((-shift_model.model_offloaded_memory(), sys.getrefcount(shift_model.model), shift_model.model_memory(), i))
                 shift_model.currently_used = False
@@ -1221,7 +1223,7 @@ def text_encoder_device():
         return get_torch_device()
     if comfy.memory_management.aimdo_enabled:
         return get_torch_device()
-    elif vram_state in (VRAMState.HIGH_VRAM, VRAMState.NORMAL_VRAM):
+    elif vram_state in (VRAMState.HIGH_VRAM, VRAMState.NORMAL_VRAM, VRAMState.SHARED):
         if should_use_fp16(prioritize_performance=False):
             return get_torch_device()
         else:

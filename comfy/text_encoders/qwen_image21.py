@@ -2,6 +2,7 @@ import numbers
 
 import torch
 
+import comfy.model_management
 import comfy.text_encoders.qwen3vl
 from comfy import sd1_clip
 
@@ -75,6 +76,14 @@ class QwenImage21TEModel(sd1_clip.SD1ClipModel):
         if len(slots) > 0:
             extra["image_slots"] = slots
         return out, pooled, extra
+
+    def memory_estimation_function(self, token_weight_pairs, device=None):
+        constant = 4.0
+        if comfy.model_management.should_use_bf16(device):
+            constant /= 2.0
+
+        num_tokens = sum(map(len, token_weight_pairs.get("qwen3vl_8b", [])))
+        return num_tokens * constant * 1024 * 1024
 
 
 def te(dtype_llama=None, llama_quantization_metadata=None):
