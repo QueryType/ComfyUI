@@ -1304,7 +1304,7 @@ def supports_cast(device, dtype): #TODO
     if dtype == torch.bfloat16:
         return True
     if is_device_mps(device):
-        return False
+        return dtype == torch.float8_e4m3fn and torch_version_numeric >= (2, 15)
     if dtype == torch.float8_e4m3fn:
         return True
     if dtype == torch.float8_e5m2:
