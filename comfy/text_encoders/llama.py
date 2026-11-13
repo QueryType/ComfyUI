@@ -560,11 +560,12 @@ class RMSNorm(nn.Module):
         self.weight = nn.Parameter(torch.empty(dim, device=device, dtype=dtype))
         self.add = add
 
-    def scale(self):
-        return self.weight + 1.0 if self.add else self.weight
+    def scale(self, x):
+        weight = comfy.ops.cast_to_input(self.weight, x, copy=False)
+        return weight + 1.0 if self.add else weight
 
     def forward(self, x: torch.Tensor):
-        return comfy.ldm.common_dit.rms_norm(x, self.scale(), self.eps)
+        return comfy.ldm.common_dit.rms_norm(x, self.scale(x), self.eps)
 
 
 
@@ -809,7 +810,7 @@ class MLP(nn.Module):
         # norm: the block's pre-norm, folded into the merged projection's input quantizer where supported
         gate_up = self.gate_up_proj if self.merged_mlp else self.combined_gate_up
         if norm is not None:
-            combined = comfy.ops.linear_input_act(gate_up, x, "rms_norm", norm.scale(), norm.eps)
+            combined = comfy.ops.linear_input_act(gate_up, x, "rms_norm", norm.scale(x), norm.eps)
         else:
             combined = comfy.ops.linear_input_act(gate_up, x, None)
         if combined is not NotImplemented:
