@@ -754,7 +754,7 @@ class Qwen35VisionModel(nn.Module):
         embeddings = embeddings.flatten(1)
         return embeddings
 
-    def fast_pos_embed_interpolate(self, grid_thw):
+    def fast_pos_embed_interpolate(self, grid_thw, dtype):
         grid_thw_list = grid_thw.tolist()
         grid_ts = [int(row[0]) for row in grid_thw_list]
         grid_hs = [int(row[1]) for row in grid_thw_list]
@@ -790,8 +790,8 @@ class Qwen35VisionModel(nn.Module):
                 idx_list[j].extend(indices[j].tolist())
                 weight_list[j].extend(weights[j].tolist())
         idx_tensor = torch.tensor(idx_list, dtype=torch.long, device=device)
-        weight_tensor = torch.tensor(weight_list, dtype=self.pos_embed.weight.dtype, device=device)
-        pos_embeds = self.pos_embed(idx_tensor).to(device) * weight_tensor[:, :, None]
+        weight_tensor = torch.tensor(weight_list, dtype=dtype, device=device)
+        pos_embeds = self.pos_embed(idx_tensor, out_dtype=dtype).to(device) * weight_tensor[:, :, None]
         patch_pos_embeds = pos_embeds[0] + pos_embeds[1] + pos_embeds[2] + pos_embeds[3]
         patch_pos_embeds = patch_pos_embeds.split([h * w for h, w in zip(grid_hs, grid_ws)])
         patch_pos_embeds_permute = []
@@ -809,7 +809,7 @@ class Qwen35VisionModel(nn.Module):
     def forward(self, x, grid_thw, premerge=None):
         # premerge: optional {block index: None}, filled with those blocks' outputs (before any merger)
         x = self.patch_embed(x)
-        pos_embeds = self.fast_pos_embed_interpolate(grid_thw).to(x.device)
+        pos_embeds = self.fast_pos_embed_interpolate(grid_thw, x.dtype).to(x.device)
         x = x + pos_embeds
         rotary_pos_emb = self.rot_pos_emb(grid_thw).to(x.device)
         seq_len = x.shape[0]
