@@ -4,6 +4,7 @@ from enum import Enum
 import logging
 
 from comfy import model_management
+from comfy.cli_args import args
 from comfy.utils import ProgressBar
 from .ldm.models.autoencoder import AutoencoderKL, AutoencodingEngine
 from .ldm.cascade.stage_a import StageA
@@ -1880,7 +1881,10 @@ def llama_detect(clip_data):
     for sd in clip_data:
         for weight_name in weight_names:
             if weight_name in sd:
-                return comfy.text_encoders.hunyuan_video.llama_detect(sd)
+                out = comfy.text_encoders.hunyuan_video.llama_detect(sd)
+                if "llama_quantization_metadata" not in out and sd[weight_name].is_floating_point() and (args.fp8_e4m3fn_text_enc or args.fp8_e5m2_text_enc or args.fp16_text_enc or args.fp32_text_enc or args.bf16_text_enc):
+                    out.pop("dtype_llama", None)
+                return out
 
     return {}
 
