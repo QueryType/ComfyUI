@@ -13,6 +13,12 @@ HOST="${1:-0.0.0.0}"
 PORT="${2:-8189}"
 shift 2 2>/dev/null || shift $#
 cd "$(dirname "$0")"
+# The GPU wired memory limit resets to the macOS default on reboot; large models need 55 GB.
+WIRED_MB=55000
+if [ "$(sysctl -n iogpu.wired_limit_mb)" -lt "$WIRED_MB" ]; then
+  echo "iogpu.wired_limit_mb is $(sysctl -n iogpu.wired_limit_mb), setting it to $WIRED_MB (needs sudo)"
+  sudo sysctl iogpu.wired_limit_mb=$WIRED_MB || exit 1
+fi
 /Volumes/d/conda/conda_envs/comfyui-torch215/bin/python main.py --listen "$HOST" --port "$PORT" \
   --use-pytorch-cross-attention \
   --highvram \
