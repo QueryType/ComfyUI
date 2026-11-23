@@ -7,7 +7,7 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 #                                    always gets forced to SHARED regardless of that flag)
 #   --bf16-vae                    : explicit bf16 VAE, native on M4
 #   --fast fp16_accumulation autotune : fp16 attention accumulation + MPS kernel autotuning
-python main.py --listen 192.168.1.2 --port 8188 \
+/Volumes/d/conda/conda_envs/comfyui-torch215/bin/python main.py --listen 192.168.1.2 --port 8188 \
   --use-pytorch-cross-attention \
   --gpu-only \
   --bf16-vae \
