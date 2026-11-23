@@ -1,20 +1,29 @@
-#python main.py --force-upcast-attention  --force-fp16 --listen 10.0.0.4 --port 8188
-#export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 export PYTORCH_ENABLE_MPS_FALLBACK=1
-#python main.py --use-split-cross-attention  --lowvram  --force-fp16 --listen 10.0.0.4 --port 8188
-# M4 Pro 64GB unified memory optimizations:
-#   --use-pytorch-cross-attention : Metal-optimized SDPA kernels, faster than sub-quadratic on MPS
-#   --highvram                    : keep models resident between runs (64GB has headroom)
-#   --reserve-vram 10             : keep 10GB headroom so the text encoder fully unloads before the diffusion model loads
-#   --bf16-vae                    : explicit bf16 VAE, native on M4
-#   --fast fp16_accumulation autotune : fp16 attention accumulation + MPS kernel autotuning
-# Usage: ./start_comfyui.sh [host] [port]
+# Same flags as start_comfyui.sh, but runs in the comfyui-torch215 conda env (torch 2.15).
+# Text encoders are stored in fp8 by default (about half the memory). Pass "full" first to keep them at full precision.
+# Diffusion model fp8: set weight_dtype = fp8_e4m3fn on the Load Diffusion Model node.
+# Default port 8189 so the browser tab shows which env you are on. Run only one env at a time when benchmarking.
+# Usage: ./start_comfyui_torch215.sh [full] [host] [port] [extra comfyui flags...]
+TE_DTYPE="--fp8_e4m3fn-text-enc"
+if [ "$1" = "full" ]; then
+  TE_DTYPE=""
+  shift
+fi
 HOST="${1:-0.0.0.0}"
-PORT="${2:-8188}"
-python main.py --listen "$HOST" --port "$PORT" \
+PORT="${2:-8189}"
+shift 2 2>/dev/null || shift $#
+cd "$(dirname "$0")"
+# The GPU wired memory limit resets to the macOS default on reboot; large models need 55 GB.
+WIRED_MB=55000
+if [ "$(sysctl -n iogpu.wired_limit_mb)" -lt "$WIRED_MB" ]; then
+  echo "iogpu.wired_limit_mb is $(sysctl -n iogpu.wired_limit_mb), setting it to $WIRED_MB (needs sudo)"
+  sudo sysctl iogpu.wired_limit_mb=$WIRED_MB || exit 1
+fi
+/Volumes/d/conda/conda_envs/comfyui-torch215/bin/python main.py --listen "$HOST" --port "$PORT" \
   --use-pytorch-cross-attention \
   --highvram \
   --reserve-vram 10 \
   --bf16-vae \
-  --fast fp16_accumulation autotune
-
+  --fast fp16_accumulation autotune \
+  $TE_DTYPE \
+  "$@"
