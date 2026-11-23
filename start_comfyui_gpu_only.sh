@@ -1,3 +1,4 @@
+#!/bin/bash
 export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 # M4 Pro 64GB unified memory optimizations:
@@ -7,7 +8,10 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 #                                    always gets forced to SHARED regardless of that flag)
 #   --bf16-vae                    : explicit bf16 VAE, native on M4
 #   --fast fp16_accumulation autotune : fp16 attention accumulation + MPS kernel autotuning
-/Volumes/d/conda/conda_envs/comfyui-torch215/bin/python main.py --listen 192.168.1.2 --port 8188 \
+source /Volumes/d/conda/conda_install/miniconda3/etc/profile.d/conda.sh
+conda activate comfyui-torch215 || exit 1
+cd "$(dirname "$0")"
+python main.py --listen 192.168.1.2 --port 8188 \
   --use-pytorch-cross-attention \
   --gpu-only \
   --bf16-vae \
